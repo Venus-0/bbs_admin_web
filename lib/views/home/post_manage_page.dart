@@ -1,6 +1,8 @@
 import 'package:bbs_admin_web/http/api.dart';
 import 'package:bbs_admin_web/model/bbs_model.dart';
+import 'package:bbs_admin_web/utils/event_bus.dart';
 import 'package:bbs_admin_web/utils/toast.dart';
+import 'package:bbs_admin_web/views/posts/post_detail.dart';
 import 'package:bbs_admin_web/widget/page_switch.dart';
 import 'package:flutter/material.dart';
 
@@ -174,7 +176,9 @@ class _PostManagePageState extends State<PostManagePage> {
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),
                           child: IconButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                eventBus.fire(PageClass(PostDetail(bbs: _bbsList[index])));
+                              },
                               icon: Icon(
                                 Icons.notes,
                                 color: Color(0xFF3498db),

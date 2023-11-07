@@ -1,3 +1,4 @@
+import 'package:bbs_admin_web/utils/event_bus.dart';
 import 'package:bbs_admin_web/views/home/dashboard_page.dart';
 import 'package:bbs_admin_web/views/home/post_manage_page.dart';
 import 'package:bbs_admin_web/views/home/user_manage_page.dart';
@@ -13,6 +14,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _index = 0;
 
+  Widget _content = Container();
+
   final List<Map<String, dynamic>> _routeList = [
     {"title": "概览", "page": DashboardPage(), "index": 0},
     {"title": "用户管理", "page": UserManagePage(), "index": 1},
@@ -21,8 +24,20 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+    _content = _routeList[_index]['page'];
+    eventBus.on<PageClass>().listen((event) {
+      setState(() {
+        _content = event.page;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    eventBus.destroy();
   }
 
   @override
@@ -82,6 +97,7 @@ class _HomePageState extends State<HomePage> {
                           onPressed: () {
                             setState(() {
                               _index = index;
+                              _content = _routeList[_index]['page'];
                             });
                           },
                           child: Text(
@@ -92,7 +108,7 @@ class _HomePageState extends State<HomePage> {
                         )),
               ),
             ),
-            Expanded(child: _routeList[_index]['page'])
+            Expanded(child: _content)
           ],
         ))
       ],

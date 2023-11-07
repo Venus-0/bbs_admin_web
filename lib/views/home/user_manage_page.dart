@@ -1,6 +1,9 @@
 import 'package:bbs_admin_web/http/api.dart';
 import 'package:bbs_admin_web/model/user_model.dart';
+import 'package:bbs_admin_web/utils/event_bus.dart';
 import 'package:bbs_admin_web/utils/toast.dart';
+import 'package:bbs_admin_web/views/users/add_user.dart';
+import 'package:bbs_admin_web/views/users/user_detail.dart';
 import 'package:bbs_admin_web/widget/buttons.dart';
 import 'package:bbs_admin_web/widget/page_switch.dart';
 import 'package:flutter/material.dart';
@@ -54,7 +57,9 @@ class _UserManagePageState extends State<UserManagePage> {
           });
         }, fillColor: Color(0xFF2ecc71), textColor: Colors.white),
         SizedBox(width: 20),
-        Buttons.getButton("添加用户", () {}, fillColor: Color(0xFF2ecc71), textColor: Colors.white),
+        Buttons.getButton("添加用户", () {
+          eventBus.fire(PageClass(AddUser()));
+        }, fillColor: Color(0xFF2ecc71), textColor: Colors.white),
       ],
     );
 
@@ -208,7 +213,9 @@ class _UserManagePageState extends State<UserManagePage> {
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),
                           child: IconButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                eventBus.fire(PageClass(UserPage(user: _userList[index])));
+                              },
                               icon: Icon(
                                 Icons.notes,
                                 color: Color(0xFF3498db),
