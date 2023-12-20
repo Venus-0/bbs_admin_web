@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bbs_admin_web/http/api.dart';
 import 'package:bbs_admin_web/model/bbs_model.dart';
 import 'package:bbs_admin_web/utils/event_bus.dart';
@@ -5,6 +7,7 @@ import 'package:bbs_admin_web/utils/toast.dart';
 import 'package:bbs_admin_web/views/posts/post_detail.dart';
 import 'package:bbs_admin_web/widget/page_switch.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class PostManagePage extends StatefulWidget {
   const PostManagePage({super.key});
@@ -19,16 +22,20 @@ class _PostManagePageState extends State<PostManagePage> {
   int _totalPage = 0;
   int _type = 0;
   UniqueKey _switchPageKey = UniqueKey();
+  late StreamSubscription postListener;
 
   @override
   void initState() {
     super.initState();
-    getUserList();
+    postListener = eventBus.on<PostEvent>().listen((event) {
+      getPostList();
+    });
+    getPostList();
   }
 
   ///获取用户列表
-  void getUserList([String searchName = "", String searchEmail = ""]) async {
-    Map _res = await Api.getBBSList(_page, _type);
+  void getPostList([String searchName = "", String searchEmail = ""]) async {
+    Map _res = await Api.getBBSList(_page, _type, pageSize: 15);
     if (_res['code'] == 200) {
       _bbsList.clear();
       List<Map<String, dynamic>> _list = List<Map<String, dynamic>>.from(_res['result']['data']);
@@ -36,10 +43,18 @@ class _PostManagePageState extends State<PostManagePage> {
         _bbsList.add(BBSModel.fromJson(_json));
       }
       _totalPage = _res['result']['page']['total'] ?? 0;
+      _switchPageKey = UniqueKey();
       setState(() {});
     } else {
       Toast.showToast(_res['msg'] ?? "出错了");
     }
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    postListener.cancel();
   }
 
   @override
@@ -84,7 +99,7 @@ class _PostManagePageState extends State<PostManagePage> {
                       _page = 1;
                       _switchPageKey = UniqueKey();
                     });
-                    getUserList();
+                    getPostList();
                   })),
         )
       ],
@@ -95,6 +110,11 @@ class _PostManagePageState extends State<PostManagePage> {
       if (type == BBSModel.TYPE_QUESTION) return "问题";
       if (type == BBSModel.TYPE_WIKI) return "文章";
       return "--";
+    }
+
+    String? formatDate(DateTime? date) {
+      if (date == null) return null;
+      return DateFormat("yyyy-MM-dd HH:mm:ss").format(date);
     }
 
     return Container(
@@ -140,18 +160,18 @@ class _PostManagePageState extends State<PostManagePage> {
                     DateTime? _deleteTime = _bbsList[index].delete_time;
                     return TableRow(decoration: BoxDecoration(color: index % 2 == 0 ? Color(0xFFD8D8D8).withAlpha(128) : null), children: [
                       Container(
+                          alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("${_bbsList[index].id}")),
+                      Container(
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),
                           child: Text(
-                            "${_bbsList[index].id} ${_deleteTime == null ? '' : '(已删除)'}",
+                            "${_bbsList[index].title} ${_deleteTime == null ? '' : '(已删除)'}",
                             style: TextStyle(
                               color: _deleteTime == null ? null : Color(0xFFe74c3c),
                               decoration: _deleteTime == null ? null : TextDecoration.lineThrough,
                               height: 1.0,
                             ),
                           )),
-                      Container(
-                          alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("${_bbsList[index].title}")),
                       Container(
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),
@@ -167,11 +187,11 @@ class _PostManagePageState extends State<PostManagePage> {
                       Container(
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),
-                          child: Text("${_bbsList[index].create_time ?? '--'}")),
+                          child: Text("${formatDate(_bbsList[index].create_time) ?? '--'}")),
                       Container(
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),
-                          child: Text("${_bbsList[index].last_reply_time ?? '--'}")),
+                          child: Text("${formatDate(_bbsList[index].last_reply_time) ?? '--'}")),
                       Container(
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),
@@ -198,7 +218,7 @@ class _PostManagePageState extends State<PostManagePage> {
                 setState(() {
                   _page = page;
                 });
-                getUserList();
+                getPostList();
               })
         ],
       ),

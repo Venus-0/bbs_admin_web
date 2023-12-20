@@ -1,7 +1,12 @@
+import 'dart:async';
+
+import 'package:bbs_admin_web/model/global_model.dart';
 import 'package:bbs_admin_web/utils/event_bus.dart';
+import 'package:bbs_admin_web/views/home/admin_manage_page.dart';
 import 'package:bbs_admin_web/views/home/dashboard_page.dart';
 import 'package:bbs_admin_web/views/home/post_manage_page.dart';
 import 'package:bbs_admin_web/views/home/user_manage_page.dart';
+import 'package:bbs_admin_web/views/my/my_page.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,17 +21,31 @@ class _HomePageState extends State<HomePage> {
 
   Widget _content = Container();
 
-  final List<Map<String, dynamic>> _routeList = [
-    {"title": "概览", "page": DashboardPage(), "index": 0},
-    {"title": "用户管理", "page": UserManagePage(), "index": 1},
-    {"title": "论坛管理", "page": PostManagePage(), "index": 2},
-  ];
+  List<Map<String, dynamic>> _routeList = [];
+  late StreamSubscription pageListener;
 
   @override
   void initState() {
     super.initState();
+    if (GlobalModel.user?.isSuperAdmin() ?? false) {
+      _routeList = [
+        {"title": "概览", "page": DashboardPage(), "index": 0},
+        {"title": "用户管理", "page": UserManagePage(), "index": 1},
+        {"title": "论坛管理", "page": PostManagePage(), "index": 2},
+        {"title": "管理员列表", "page": AdminManagePage(), "index": 3},
+        {"title": "个人信息", "page": MyPage(), "index": 4}
+      ];
+    } else {
+      _routeList = [
+        // {"title": "概览", "page": DashboardPage(), "index": 0},
+        {"title": "用户管理", "page": UserManagePage(), "index": 0},
+        {"title": "论坛管理", "page": PostManagePage(), "index": 1},
+        {"title": "个人信息", "page": MyPage(), "index": 2}
+        // {"title": "管理员列表", "page": AdminManagePage(), "index": 3}
+      ];
+    }
     _content = _routeList[_index]['page'];
-    eventBus.on<PageClass>().listen((event) {
+    pageListener = eventBus.on<PageClass>().listen((event) {
       setState(() {
         _content = event.page;
       });
@@ -37,7 +56,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     // TODO: implement dispose
     super.dispose();
-    eventBus.destroy();
+    pageListener.cancel();
   }
 
   @override
@@ -75,7 +94,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             Container(
               height: double.infinity,
-              width: 240,
+              width: 180,
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [

@@ -1,15 +1,17 @@
 import 'package:bbs_admin_web/http/api.dart';
 import 'package:bbs_admin_web/model/bbs_model.dart';
 import 'package:bbs_admin_web/model/user_model.dart';
+import 'package:bbs_admin_web/utils/event_bus.dart';
 import 'package:bbs_admin_web/utils/toast.dart';
 import 'package:bbs_admin_web/widget/buttons.dart';
 import 'package:bbs_admin_web/widget/page_switch.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:intl/intl.dart';
 
 class UserPage extends StatefulWidget {
-  const UserPage({super.key, required this.user});
-  final UserModel user;
+  UserPage({super.key, required this.user});
+  UserModel user;
   @override
   State<UserPage> createState() => _UserPageState();
 }
@@ -22,7 +24,7 @@ class _UserPageState extends State<UserPage> {
   UniqueKey _switchPageKey = UniqueKey();
 
   ///获取用户列表
-  void getUserList([String searchName = "", String searchEmail = ""]) async {
+  void getBBSList([String searchName = "", String searchEmail = ""]) async {
     Map _res = await Api.getBBSList(_page, _type);
     if (_res['code'] == 200) {
       _bbsList.clear();
@@ -41,7 +43,35 @@ class _UserPageState extends State<UserPage> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    getUserList();
+    getBBSList();
+  }
+
+  ///禁用用户
+  void onBan() async {
+    EasyLoading.show();
+    bool _ret = await Api.banUser(widget.user.user_id);
+    EasyLoading.dismiss();
+
+    if (_ret) {
+      setState(() {
+        widget.user.disable_time = DateTime.now();
+      });
+      eventBus.fire(UserEvent());
+    }
+  }
+
+  ///启用用户
+  void onActive() async {
+    EasyLoading.show();
+    bool _ret = await Api.activeUser(widget.user.user_id);
+    EasyLoading.dismiss();
+
+    if (_ret) {
+      setState(() {
+        widget.user.disable_time = null;
+      });
+      eventBus.fire(UserEvent());
+    }
   }
 
   @override
@@ -121,7 +151,33 @@ class _UserPageState extends State<UserPage> {
               ),
               Container(
                 color: Color(0xff03A9F4).withAlpha(128),
-                height: 36,
+                height: 42,
+                child: Text("用户等级"),
+                alignment: Alignment.center,
+              ),
+              Container(
+                height: 42,
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: DropdownButtonHideUnderline(
+                    child: DropdownButton(
+                  value: widget.user.rank,
+                  items: [DropdownMenuItem(child: Text('普通用户'), value: 0), DropdownMenuItem(child: Text("技术支持"), value: 1)],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    Api.updateUser(widget.user.user_id, {"rank": value}).then((ret) {
+                      if (ret) {
+                        setState(() {
+                          widget.user.rank = value;
+                        });
+                      }
+                    });
+                  },
+                )),
+                alignment: Alignment.center,
+              ),
+              Container(
+                color: Color(0xff03A9F4).withAlpha(128),
+                height: 42,
                 child: Text("用户禁用时间"),
                 alignment: Alignment.center,
               ),
@@ -131,8 +187,6 @@ class _UserPageState extends State<UserPage> {
                     "${widget.user.disable_time == null ? '--' : DateFormat("yyyy-MM-dd HH:mm:ss").format(widget.user.disable_time!)}"),
                 alignment: Alignment.center,
               ),
-              Container(),
-              Container(),
             ])
       ],
     );
@@ -212,7 +266,7 @@ class _UserPageState extends State<UserPage> {
           setState(() {
             _page = page;
           });
-          getUserList();
+          getBBSList();
         });
 
     return Container(
@@ -248,7 +302,14 @@ class _UserPageState extends State<UserPage> {
                         title: Text("提示"),
                         content: Text("是否${widget.user.disable_time == null ? '禁用' : '启用'}该账户?"),
                         actions: [
-                          Buttons.getButton("是", () async {}, textColor: Color(0xFFe74c3c)),
+                          Buttons.getButton("是", () {
+                            Navigator.pop(context);
+                            if (widget.user.disable_time == null) {
+                              onBan();
+                            } else {
+                              onActive();
+                            }
+                          }, textColor: Color(0xFFe74c3c)),
                           Buttons.getButton("否", () {
                             Navigator.pop(context);
                           }),

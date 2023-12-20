@@ -2,7 +2,7 @@ import 'dart:html';
 
 import 'package:bbs_admin_web/views/home/home_page.dart';
 import 'package:bbs_admin_web/http/api.dart';
-import 'package:bbs_admin_web/login/login_page.dart';
+import 'package:bbs_admin_web/views/login/login_page.dart';
 import 'package:bbs_admin_web/model/admin_user_model.dart';
 import 'package:bbs_admin_web/model/global_model.dart';
 import 'package:flutter/material.dart';

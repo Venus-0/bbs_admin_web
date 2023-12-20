@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bbs_admin_web/http/api.dart';
 import 'package:bbs_admin_web/model/user_model.dart';
 import 'package:bbs_admin_web/utils/event_bus.dart';
@@ -7,6 +9,7 @@ import 'package:bbs_admin_web/views/users/user_detail.dart';
 import 'package:bbs_admin_web/widget/buttons.dart';
 import 'package:bbs_admin_web/widget/page_switch.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class UserManagePage extends StatefulWidget {
   const UserManagePage({super.key});
@@ -25,15 +28,26 @@ class _UserManagePageState extends State<UserManagePage> {
   TextEditingController _userEmailSearchController = TextEditingController();
 
   UniqueKey _switchPageKey = UniqueKey();
+  late StreamSubscription userListener;
   @override
   void initState() {
     super.initState();
+    userListener = eventBus.on<UserEvent>().listen((event) {
+      getUserList();
+    });
     getUserList();
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    userListener.cancel();
   }
 
   ///获取用户列表
   void getUserList([String searchName = "", String searchEmail = ""]) async {
-    Map _res = await Api.getUserList(_page, findEmail: searchEmail, findName: searchName);
+    Map _res = await Api.getUserList(_page, findEmail: searchEmail, findName: searchName, pageSize: 15);
     if (_res['code'] == 200) {
       _userList.clear();
       List<Map<String, dynamic>> _list = List<Map<String, dynamic>>.from(_res['result']['data']);
@@ -41,6 +55,7 @@ class _UserManagePageState extends State<UserManagePage> {
         _userList.add(UserModel.fromJson(_json));
       }
       _totalPage = _res['result']['page']['total'] ?? 0;
+      _switchPageKey = UniqueKey();
       setState(() {});
     } else {
       Toast.showToast(_res['msg'] ?? "出错了");
@@ -49,6 +64,11 @@ class _UserManagePageState extends State<UserManagePage> {
 
   @override
   Widget build(BuildContext context) {
+    String? formatDate(DateTime? date) {
+      if (date == null) return null;
+      return DateFormat("yyyy-MM-dd HH:mm:ss").format(date);
+    }
+
     Widget _buttonBar = Row(
       children: [
         Buttons.getButton("筛选", () {
@@ -171,12 +191,22 @@ class _UserManagePageState extends State<UserManagePage> {
           Expanded(
             child: SingleChildScrollView(
               child: Table(
+                columnWidths: {
+                  0: FlexColumnWidth(1),
+                  1: FlexColumnWidth(2),
+                  2: FlexColumnWidth(2),
+                  3: FlexColumnWidth(1),
+                  4: FlexColumnWidth(2),
+                  5: FlexColumnWidth(2),
+                  6: FlexColumnWidth(1),
+                },
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [
                   TableRow(children: [
                     Container(alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("用户ID")),
                     Container(alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("用户昵称")),
                     Container(alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("用户邮箱")),
+                    Container(alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("等级")),
                     Container(alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("注册时间")),
                     Container(alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("最后一次登陆时间")),
                     Container(alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("详情")),
@@ -192,7 +222,7 @@ class _UserManagePageState extends State<UserManagePage> {
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),
                           child: Text(
-                            "${_userList[index].username} ${_deleteTime == null ? '' : '(已删除)'}",
+                            "${_userList[index].username} ${_deleteTime == null ? '' : '(已禁用)'}",
                             style: TextStyle(
                               color: _deleteTime == null ? null : Color(0xFFe74c3c),
                               decoration: _deleteTime == null ? null : TextDecoration.lineThrough,
@@ -206,9 +236,15 @@ class _UserManagePageState extends State<UserManagePage> {
                       Container(
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),
-                          child: Text("${_userList[index].create_time ?? '--'}")),
+                          child: Text("${_userList[index].rank == 1 ? '技术支持' : '普通用户'}")),
                       Container(
-                          alignment: Alignment.center, constraints: BoxConstraints(minHeight: 32), child: Text("xxxx-xx-xx xx:xx:xx")),
+                          alignment: Alignment.center,
+                          constraints: BoxConstraints(minHeight: 32),
+                          child: Text("${formatDate(_userList[index].create_time) ?? '--'}")),
+                      Container(
+                          alignment: Alignment.center,
+                          constraints: BoxConstraints(minHeight: 32),
+                          child: Text("${formatDate(_userList[index].update_time) ?? '--'}")),
                       Container(
                           alignment: Alignment.center,
                           constraints: BoxConstraints(minHeight: 32),

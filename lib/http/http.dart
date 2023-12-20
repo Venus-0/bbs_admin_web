@@ -49,6 +49,7 @@ class Http {
     } on DioException catch (e) {
       print(e.message);
       print(e.error.toString());
+      print(e.response.toString());
 
       ///异常请求处理
       try {
@@ -73,6 +74,10 @@ class Http {
 
   static saveCookie(String cookie) {
     document.cookie = cookie;
+  }
+
+  static removeCookie() {
+    document.cookie = null;
   }
 
   //拦截器部分

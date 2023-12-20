@@ -1,10 +1,12 @@
 import 'package:bbs_admin_web/http/api.dart';
 import 'package:bbs_admin_web/model/bbs_model.dart';
 import 'package:bbs_admin_web/model/comment_model.dart';
+import 'package:bbs_admin_web/utils/event_bus.dart';
 import 'package:bbs_admin_web/utils/toast.dart';
 import 'package:bbs_admin_web/widget/buttons.dart';
 import 'package:bbs_admin_web/widget/page_switch.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:intl/intl.dart';
 
 class PostDetail extends StatefulWidget {
@@ -32,6 +34,30 @@ class _PostDetailState extends State<PostDetail> {
     // TODO: implement initState
     super.initState();
     getPostCommentList();
+  }
+
+  void onDelete() async {
+    EasyLoading.show();
+    bool _ret = await Api.deletePost(widget.bbs.id);
+    EasyLoading.dismiss();
+    if (_ret) {
+      setState(() {
+        widget.bbs.delete_time = DateTime.now();
+      });
+      eventBus.fire(PostEvent());
+    }
+  }
+
+  void onActive() async {
+    EasyLoading.show();
+    bool _ret = await Api.activePost(widget.bbs.id);
+    EasyLoading.dismiss();
+    if (_ret) {
+      setState(() {
+        widget.bbs.delete_time = DateTime.now();
+      });
+      eventBus.fire(PostEvent());
+    }
   }
 
   @override
@@ -129,7 +155,7 @@ class _PostDetailState extends State<PostDetail> {
           ),
           Container(
             color: Color(0xff03A9F4).withAlpha(128),
-            height: 36,
+            height: 42,
             child: Text("帖子删除时间"),
             alignment: Alignment.center,
           ),
@@ -140,7 +166,7 @@ class _PostDetailState extends State<PostDetail> {
           ),
           Container(
             color: Color(0xff03A9F4).withAlpha(128),
-            height: 36,
+            height: 42,
             child: Text("帖子最后回复时间"),
             alignment: Alignment.center,
           ),
@@ -150,6 +176,86 @@ class _PostDetailState extends State<PostDetail> {
                 "${widget.bbs.last_reply_time == null ? '--' : DateFormat("yyyy-MM-dd HH:mm:ss").format(widget.bbs.last_reply_time!)}"),
             alignment: Alignment.center,
           ),
+        ]),
+        TableRow(children: [
+          Container(
+            color: Color(0xff03A9F4).withAlpha(128),
+            height: 42,
+            child: Text("精华帖"),
+            alignment: Alignment.center,
+          ),
+          Container(
+            height: 42,
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: DropdownButtonHideUnderline(
+                child: DropdownButton(
+              value: widget.bbs.is_top,
+              items: [DropdownMenuItem(child: Text('否'), value: 0), DropdownMenuItem(child: Text("是"), value: 1)],
+              onChanged: (value) {
+                if (value == null) return;
+                if (widget.bbs.isTop) {
+                  Api.untopPost(widget.bbs.id).then((ret) {
+                    if (ret) {
+                      setState(() {
+                        widget.bbs.is_top = value;
+                      });
+                      eventBus..fire(PostEvent());
+                    }
+                  });
+                } else {
+                  Api.topPost(widget.bbs.id).then((ret) {
+                    if (ret) {
+                      setState(() {
+                        widget.bbs.is_top = value;
+                      });
+                      eventBus..fire(PostEvent());
+                    }
+                  });
+                }
+              },
+            )),
+            alignment: Alignment.center,
+          ),
+          Container(
+            color: Color(0xff03A9F4).withAlpha(128),
+            height: 42,
+            child: Text("推荐帖"),
+            alignment: Alignment.center,
+          ),
+          Container(
+            height: 42,
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: DropdownButtonHideUnderline(
+                child: DropdownButton(
+              value: widget.bbs.is_recommand,
+              items: [DropdownMenuItem(child: Text('否'), value: 0), DropdownMenuItem(child: Text("是"), value: 1)],
+              onChanged: (value) {
+                if (value == null) return;
+                if (widget.bbs.isRecommand) {
+                  Api.unrecommandPost(widget.bbs.id).then((ret) {
+                    if (ret) {
+                      setState(() {
+                        widget.bbs.is_recommand = value;
+                      });
+                      eventBus..fire(PostEvent());
+                    }
+                  });
+                } else {
+                  Api.recommandPost(widget.bbs.id).then((ret) {
+                    if (ret) {
+                      setState(() {
+                        widget.bbs.is_recommand = value;
+                      });
+                      eventBus..fire(PostEvent());
+                    }
+                  });
+                }
+              },
+            )),
+            alignment: Alignment.center,
+          ),
+          Container(),
+          Container(),
         ])
       ],
     );
@@ -242,7 +348,10 @@ class _PostDetailState extends State<PostDetail> {
                                 title: Text("提示"),
                                 content: Text("是否删除该贴?"),
                                 actions: [
-                                  Buttons.getButton("是", () async {}, textColor: Color(0xFFe74c3c)),
+                                  Buttons.getButton("是", () async {
+                                    Navigator.pop(context);
+                                    onDelete();
+                                  }, textColor: Color(0xFFe74c3c)),
                                   Buttons.getButton("否", () {
                                     Navigator.pop(context);
                                   }),
@@ -254,7 +363,31 @@ class _PostDetailState extends State<PostDetail> {
                           textColor: Colors.white,
                         ),
                       ]
-                    : [Container()]
+                    : [
+                        Buttons.getButton(
+                          "启用帖子",
+                          () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text("提示"),
+                                content: Text("是否启用该贴?"),
+                                actions: [
+                                  Buttons.getButton("是", () async {
+                                    Navigator.pop(context);
+                                    onActive();
+                                  }, textColor: Color(0xFFe74c3c)),
+                                  Buttons.getButton("否", () {
+                                    Navigator.pop(context);
+                                  }),
+                                ],
+                              ),
+                            );
+                          },
+                          fillColor: Color(0xFF2ecc71),
+                          textColor: Colors.white,
+                        ),
+                      ]
               ],
             ),
             SizedBox(height: 10),
